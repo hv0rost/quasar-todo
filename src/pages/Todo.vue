@@ -5,7 +5,7 @@
       filled
       class="col"
       bg-color="white"
-      v-model="newTask"
+      v-model="newTask.title"
       placeholder="Add task"
       @keyup.enter="addTask"
       dense>
@@ -20,18 +20,24 @@
         </template>
       </q-input>
     </div>
-    <q-list
+
+      <div
+        class="text-h6 text-center text-primary"
+        v-if="getUncompletedTasks.length !== 0">
+      Todo
+      </div>
+
+      <q-list
       class="bg-white"
       separator
       bordered
     >
       <q-item
         v-ripple
-        v-for="(task, index) in tasks"
-        :key="task.tile"
-        @click="task.done = !task.done"
+        v-for="task in getUncompletedTasks"
+        :key="task.title"
+        @click="onTaskClick(task.index)"
         clickable
-        :class="{'done bg-purple-1' : task.done}"
       >
         <q-item-section avatar>
           <q-checkbox
@@ -42,15 +48,47 @@
         <q-item-section>
           <q-item-label>{{task.title}}</q-item-label>
         </q-item-section>
-        <q-item-section
-          v-if="task.done"
-          side>
-         <q-btn @click.stop="deleteTask(index)" flat round color="primary" icon="delete" dense/>
-        </q-item-section>
       </q-item>
     </q-list>
+
     <div
-      v-if="!tasks.length"
+        class="text-h6 text-center text-primary"
+        v-if="getCompletedTasks.length !== 0">
+      Done
+      </div>
+
+    <q-list
+        class="bg-white"
+        separator
+        bordered
+      >
+        <q-item
+          v-ripple
+          v-for="task in getCompletedTasks"
+          :key="task.title"
+          @click="onTaskClick(task.index)"
+          clickable
+          :class="{'done bg-purple-1' : task.done}"
+        >
+          <q-item-section avatar>
+            <q-checkbox
+            v-model="task.done"
+            class="no-pointer-events"
+            color="primary" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>{{task.title}}</q-item-label>
+          </q-item-section>
+          <q-item-section
+            v-if="task.done"
+            side>
+          <q-btn @click.stop="deleteTask(task.index)" flat round color="primary" icon="delete" dense/>
+          </q-item-section>
+        </q-item>
+      </q-list>
+
+    <div
+      v-if="!getAllTasks.length"
       class="no-tasks absolute-center">
       <q-icon
       name="check"
@@ -69,31 +107,51 @@ export default {
   name: 'todo-list',
   data () {
     return {
-      newTask: '',
-      tasks: []
+      newTask: {
+        index: 0,
+        title: '',
+        done: false
+      }
+    }
+  },
+  computed: {
+    getUncompletedTasks () {
+      return this.$store.getters.getTasks.filter(task => task.done === false)
+    },
+    getCompletedTasks () {
+      return this.$store.getters.getTasks.filter(task => task.done === true)
+    },
+    getAllTasks () {
+      return this.$store.getters.getTasks
     }
   },
   methods: {
     deleteTask (index) {
+      console.log(this.getAllTasks)
+      console.log(index)
       this.$q.dialog({
         title: 'Confirm',
         message: 'Would you like to delete this item?',
         cancel: true,
         persistent: true
       }).onOk(() => {
-        this.tasks.splice(index, 1)
+        this.$store.dispatch('deleteTask', index)
         this.$q.notify({
           message: 'Item was successfully deleted!',
           color: 'purple'
         })
       })
     },
-    addTask () {
-      this.tasks.push({
-        title: this.newTask,
-        done: false
-      })
-      this.newTask = ''
+    async addTask () {
+      this.newTask.index = this.getAllTasks.length
+      console.log(this.newTask.index)
+      this.$store.dispatch('addTask', Object.assign({}, this.newTask))
+      this.newTask.title = ''
+    },
+    async onTaskClick (index) {
+      console.log(this.getAllTasks)
+      console.log(index)
+      this.$store.dispatch('updateTask', index)
     }
   }
 }
